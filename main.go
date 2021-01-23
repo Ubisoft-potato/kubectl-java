@@ -1,22 +1,26 @@
 package main
 
 import (
-	"fmt"
-	"github.com/spf13/cobra"
 	"os"
+
+	"github.com/cyka/kubectl-java/cmd"
+	"github.com/spf13/pflag"
+
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
 
 func main() {
-	rootCmd := &cobra.Command{
-		Use:   "",
-		Long:  "",
-		Short: "",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return nil
-		},
-	}
-	if err := rootCmd.Execute(); err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err)
+	flags := pflag.NewFlagSet("kubectl-java", pflag.ExitOnError)
+	pflag.CommandLine = flags
+
+	javaCmd := cmd.NewKubeJavaCmd(genericclioptions.IOStreams{
+		In:     os.Stdin,
+		Out:    os.Stdout,
+		ErrOut: os.Stderr,
+	})
+
+	if err := javaCmd.Execute(); err != nil {
+		//todo handle err here
 		os.Exit(1)
 	}
 }
