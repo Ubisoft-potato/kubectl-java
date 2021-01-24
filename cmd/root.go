@@ -2,26 +2,29 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
+
 	"github.com/spf13/cobra"
+
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/util/homedir"
-	"path/filepath"
+
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 var (
-	exampleUsage = `
-	# list pods that running java application
-	%[1]s java list`
 	usage            = "kubectl-java [command]"
 	version          = "v1.0.0"
 	shortDescription = "The Kubectl Plugin For Java Application"
 	longDescription  = "The Kubectl Plugin For Java Application"
+	exampleUsage     = `
+	# list pods that running java application
+	%[1]s java list`
 )
 
 type KubeJavaAppOptions struct {
-	configFlags *genericclioptions.ConfigFlags
-	//todo
-
+	configFlags   *genericclioptions.ConfigFlags
+	userKubConfig clientcmdapi.Config
 	genericclioptions.IOStreams
 }
 
@@ -36,6 +39,7 @@ func NewKubeJavaAppOptions(IOStreams genericclioptions.IOStreams) *KubeJavaAppOp
 
 func NewKubeJavaCmd(streams genericclioptions.IOStreams) *cobra.Command {
 	options := NewKubeJavaAppOptions(streams)
+	podFinder := NewJavaPodFinder(streams, options)
 
 	rootCmd := &cobra.Command{
 		Use:     usage,
@@ -43,13 +47,21 @@ func NewKubeJavaCmd(streams genericclioptions.IOStreams) *cobra.Command {
 		Long:    longDescription,
 		Version: version,
 		Example: fmt.Sprintf(exampleUsage, "kubectl"),
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
+			options.userKubConfig, err = options.configFlags.ToRawKubeConfigLoader().RawConfig()
+			return
+		},
 	}
-	// add  flags
+	// add flags
 	options.configFlags.AddFlags(rootCmd.PersistentFlags())
 	// find java pod cmd
-	rootCmd.AddCommand(NewListCmd(streams))
+	rootCmd.AddCommand(NewListCmd(podFinder))
 
 	return rootCmd
+}
+
+func build() {
+
 }
 
 func getLocalKubeConfigPath() *string {
