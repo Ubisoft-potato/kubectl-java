@@ -3,7 +3,6 @@ module github.com/cyka/kubectl-java
 go 1.15
 
 require (
-	github.com/fatih/color v1.7.0
 	github.com/go-openapi/strfmt v0.20.0 // indirect
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/mattn/go-runewidth v0.0.10 // indirect
