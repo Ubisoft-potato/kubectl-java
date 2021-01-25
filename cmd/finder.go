@@ -50,10 +50,12 @@
 package cmd
 
 import (
+	"context"
 	"github.com/cyka/kubectl-java/util"
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/jedib0t/go-pretty/text"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
@@ -66,7 +68,7 @@ var (
 	listExample = ""
 
 	// table header
-	header = table.Row{"node", "pod"}
+	header = table.Row{"node", "pod", "container"}
 )
 
 //New kubectl-java list sub cmd
@@ -76,10 +78,11 @@ func NewListCmd(finder *JavaPodFinder) *cobra.Command {
 		Short:   listShort,
 		Long:    listLong,
 		Example: listExample,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			finder.addKubeConfigInfo()
+			err = finder.findJavaPods()
 			finder.render()
-			return nil
+			return
 		},
 	}
 	return cmd
@@ -106,7 +109,19 @@ func (f *JavaPodFinder) addKubeConfigInfo() {
 	kubConfig := f.options.userKubConfig
 	currentContext, currentNameSpace, masterURL := util.GetCurrentConfigInfo(kubConfig)
 	f.writer.SetTitle("Context:%s NameSpace:%s MasterURL:%s", currentContext, currentNameSpace, masterURL)
-	f.writer.AppendRow(table.Row{"1.1.1.1", "order-service"})
+}
+
+func (f *JavaPodFinder) findJavaPods() error {
+	nodeList, nodeErr := f.options.clientSet.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+	if nodeErr != nil {
+		return nodeErr
+	}
+	rows := make([]table.Row, len(nodeList.Items))
+	for i, item := range nodeList.Items {
+		rows[i] = append(rows[i], item.Name)
+	}
+	f.writer.AppendRows(rows)
+	return nil
 }
 
 func (f *JavaPodFinder) render() {
@@ -129,7 +144,13 @@ func customTableWriter(writer table.Writer) {
 		{
 			Number:      2,
 			Align:       text.AlignCenter,
-			AlignFooter: 0,
+			AlignHeader: text.AlignCenter,
+			WidthMin:    30,
+			WidthMax:    40,
+		},
+		{
+			Number:      3,
+			Align:       text.AlignCenter,
 			AlignHeader: text.AlignCenter,
 			WidthMin:    30,
 			WidthMax:    40,
