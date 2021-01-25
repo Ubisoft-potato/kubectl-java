@@ -56,9 +56,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/client-go/util/homedir"
-
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"k8s.io/client-go/util/homedir"
 )
 
 var (
@@ -86,6 +85,18 @@ func NewKubeJavaAppOptions(IOStreams genericclioptions.IOStreams) *KubeJavaAppOp
 	}
 }
 
+func getLocalKubeConfigPath() *string {
+	var kubeConfig *string
+	if home := homedir.HomeDir(); home != "" {
+		kubeConfig = stringPtr(filepath.Join(home, ".kube", "config"))
+	}
+	return kubeConfig
+}
+
+func stringPtr(val string) *string {
+	return &val
+}
+
 func NewKubeJavaCmd(streams genericclioptions.IOStreams) *cobra.Command {
 	options := NewKubeJavaAppOptions(streams)
 	podFinder := NewJavaPodFinder(streams, options)
@@ -107,16 +118,4 @@ func NewKubeJavaCmd(streams genericclioptions.IOStreams) *cobra.Command {
 	rootCmd.AddCommand(NewListCmd(podFinder))
 
 	return rootCmd
-}
-
-func getLocalKubeConfigPath() *string {
-	var kubeConfig *string
-	if home := homedir.HomeDir(); home != "" {
-		kubeConfig = stringPtr(filepath.Join(home, ".kube", "config"))
-	}
-	return kubeConfig
-}
-
-func stringPtr(val string) *string {
-	return &val
 }

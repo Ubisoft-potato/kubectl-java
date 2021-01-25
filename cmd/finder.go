@@ -54,6 +54,7 @@ import (
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/jedib0t/go-pretty/text"
 	"github.com/spf13/cobra"
+
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
 
@@ -84,10 +85,14 @@ func NewJavaPodFinder(IOStreams genericclioptions.IOStreams, options *KubeJavaAp
 
 func (f *JavaPodFinder) addKubeConfigInfo() {
 	kubConfig := f.options.userKubConfig
-	currentContext, currentNameSpace := util.GetCurrentContext(kubConfig), util.GetCurrentNameSpace(kubConfig)
-	f.writer.SetTitle("Context:%s NameSpace:%s", currentContext, currentNameSpace)
+	currentContext, currentNameSpace, masterURL := util.GetCurrentConfigInfo(kubConfig)
+	f.writer.SetTitle("Context:%s NameSpace:%s MasterURL:%s", currentContext, currentNameSpace, masterURL)
 	f.writer.AppendHeader(table.Row{"c1", "c2"})
 	f.writer.AppendRow(table.Row{"h", "w"})
+}
+
+func (f *JavaPodFinder) render() {
+	f.writer.Render()
 }
 
 func customTableWriter(writer table.Writer) {
@@ -112,10 +117,6 @@ func customTableWriter(writer table.Writer) {
 			WidthMax:    40,
 		},
 	})
-}
-
-func (f *JavaPodFinder) render() {
-	f.writer.Render()
 }
 
 func NewListCmd(finder *JavaPodFinder) *cobra.Command {

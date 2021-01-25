@@ -51,11 +51,10 @@ package util
 
 import clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
-func GetCurrentContext(config clientcmdapi.Config) string {
-	return config.CurrentContext
-}
-
-func GetCurrentNameSpace(config clientcmdapi.Config) string {
-	currentContext := GetCurrentContext(config)
-	return config.Contexts[currentContext].Namespace
+func GetCurrentConfigInfo(config clientcmdapi.Config) (currentContext, currentNameSpace, masterUrl string) {
+	currentContext = config.CurrentContext
+	context := config.Contexts[currentContext]
+	currentNameSpace = context.Namespace
+	masterUrl = config.Clusters[context.Cluster].Server
+	return
 }
