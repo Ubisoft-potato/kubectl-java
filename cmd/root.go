@@ -99,7 +99,7 @@ func NewKubeJavaCmd(streams genericclioptions.IOStreams) *cobra.Command {
 type KubeJavaAppOptions struct {
 	configFlags   *genericclioptions.ConfigFlags
 	userKubConfig clientcmdapi.Config
-	client        *kubernetes.Clientset
+	clientSet     *kubernetes.Clientset
 	genericclioptions.IOStreams
 }
 
@@ -131,11 +131,11 @@ func initBeforeExecute(options *KubeJavaAppOptions) error {
 		return rawErr
 	}
 	restConfig, _ := kubeConfigLoader.ClientConfig()
-	client, clientErr := kubernetes.NewForConfig(restConfig)
+	clientSet, clientErr := kubernetes.NewForConfig(restConfig)
 	if clientErr != nil {
 		return clientErr
 	}
 	options.userKubConfig = userKubConfig
-	options.client = client
+	options.clientSet = clientSet
 	return nil
 }
