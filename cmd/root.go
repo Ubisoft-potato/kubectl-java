@@ -56,6 +56,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/client-go/kubernetes"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/util/homedir"
 )
@@ -70,9 +71,35 @@ var (
 	%[1]s java list`
 )
 
+// New kubectl-java main cmd
+func NewKubeJavaCmd(streams genericclioptions.IOStreams) *cobra.Command {
+	options := NewKubeJavaAppOptions(streams)
+	podFinder := NewJavaPodFinder(streams, options)
+
+	rootCmd := &cobra.Command{
+		Use:     usage,
+		Short:   shortDescription,
+		Long:    longDescription,
+		Version: version,
+		Example: fmt.Sprintf(exampleUsage, "kubectl"),
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
+			err = initBeforeExecute(options)
+			return
+		},
+	}
+	// add flags
+	options.configFlags.AddFlags(rootCmd.PersistentFlags())
+	// find java pod cmd
+	rootCmd.AddCommand(NewListCmd(podFinder))
+
+	return rootCmd
+}
+
+//cmd options
 type KubeJavaAppOptions struct {
 	configFlags   *genericclioptions.ConfigFlags
 	userKubConfig clientcmdapi.Config
+	client        *kubernetes.Clientset
 	genericclioptions.IOStreams
 }
 
@@ -97,25 +124,18 @@ func stringPtr(val string) *string {
 	return &val
 }
 
-func NewKubeJavaCmd(streams genericclioptions.IOStreams) *cobra.Command {
-	options := NewKubeJavaAppOptions(streams)
-	podFinder := NewJavaPodFinder(streams, options)
-
-	rootCmd := &cobra.Command{
-		Use:     usage,
-		Short:   shortDescription,
-		Long:    longDescription,
-		Version: version,
-		Example: fmt.Sprintf(exampleUsage, "kubectl"),
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
-			options.userKubConfig, err = options.configFlags.ToRawKubeConfigLoader().RawConfig()
-			return
-		},
+func initBeforeExecute(options *KubeJavaAppOptions) error {
+	kubeConfigLoader := options.configFlags.ToRawKubeConfigLoader()
+	userKubConfig, rawErr := kubeConfigLoader.RawConfig()
+	if rawErr != nil {
+		return rawErr
 	}
-	// add flags
-	options.configFlags.AddFlags(rootCmd.PersistentFlags())
-	// find java pod cmd
-	rootCmd.AddCommand(NewListCmd(podFinder))
-
-	return rootCmd
+	restConfig, _ := kubeConfigLoader.ClientConfig()
+	client, clientErr := kubernetes.NewForConfig(restConfig)
+	if clientErr != nil {
+		return clientErr
+	}
+	options.userKubConfig = userKubConfig
+	options.client = client
+	return nil
 }
