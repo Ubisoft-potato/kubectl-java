@@ -64,7 +64,26 @@ var (
 	listShort   = "List All Pods That Running Java Application"
 	listLong    = "List All Pods That Running Java Application"
 	listExample = ""
+
+	// table header
+	header = table.Row{"node", "pod"}
 )
+
+//New kubectl-java list sub cmd
+func NewListCmd(finder *JavaPodFinder) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     listUsage,
+		Short:   listShort,
+		Long:    listLong,
+		Example: listExample,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			finder.addKubeConfigInfo()
+			finder.render()
+			return nil
+		},
+	}
+	return cmd
+}
 
 type JavaPodFinder struct {
 	genericclioptions.IOStreams
@@ -87,8 +106,7 @@ func (f *JavaPodFinder) addKubeConfigInfo() {
 	kubConfig := f.options.userKubConfig
 	currentContext, currentNameSpace, masterURL := util.GetCurrentConfigInfo(kubConfig)
 	f.writer.SetTitle("Context:%s NameSpace:%s MasterURL:%s", currentContext, currentNameSpace, masterURL)
-	f.writer.AppendHeader(table.Row{"c1", "c2"})
-	f.writer.AppendRow(table.Row{"h", "w"})
+	f.writer.AppendRow(table.Row{"1.1.1.1", "order-service"})
 }
 
 func (f *JavaPodFinder) render() {
@@ -96,20 +114,20 @@ func (f *JavaPodFinder) render() {
 }
 
 func customTableWriter(writer table.Writer) {
+	writer.AppendHeader(header)
 	writer.SetStyle(table.StyleColoredBright)
 	writer.Style().Title.Align = text.AlignCenter
 	writer.Style().Title.Colors = text.Colors{text.BgHiBlack, text.FgHiYellow}
-	writer.SetAutoIndex(true)
 	writer.SetColumnConfigs([]table.ColumnConfig{
 		{
-			Name:        "c1",
+			Number:      1,
 			Align:       text.AlignCenter,
 			AlignHeader: text.AlignCenter,
 			WidthMin:    30,
 			WidthMax:    40,
 		},
 		{
-			Name:        "c2",
+			Number:      2,
 			Align:       text.AlignCenter,
 			AlignFooter: 0,
 			AlignHeader: text.AlignCenter,
@@ -117,19 +135,4 @@ func customTableWriter(writer table.Writer) {
 			WidthMax:    40,
 		},
 	})
-}
-
-func NewListCmd(finder *JavaPodFinder) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:     listUsage,
-		Short:   listShort,
-		Long:    listLong,
-		Example: listExample,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			finder.addKubeConfigInfo()
-			finder.render()
-			return nil
-		},
-	}
-	return cmd
 }
