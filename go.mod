@@ -10,6 +10,8 @@ require (
 	github.com/spf13/pflag v1.0.5
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c // indirect
+	k8s.io/api v0.20.2
+	k8s.io/apimachinery v0.20.2
 	k8s.io/cli-runtime v0.20.2
 	k8s.io/client-go v0.20.2
 )

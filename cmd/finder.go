@@ -50,10 +50,15 @@
 package cmd
 
 import (
+	"context"
+	"fmt"
 	"github.com/cyka/kubectl-java/util"
 	"github.com/spf13/cobra"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/printers"
 )
 
 var (
@@ -61,11 +66,22 @@ var (
 	listUsage   = "list [flags]"
 	listShort   = "List All Pods That Running Java Application"
 	listLong    = "List All Pods That Running Java Application"
-	listExample = ``
+	listExample = `
+	just get pods that running java application
+	`
+)
+
+var (
+	columnDefinitions = []metav1.TableColumnDefinition{
+		{Name: "name", Type: "string"},
+		{Name: "status", Type: "string"},
+		{Name: "containers", Type: "array"},
+	}
 )
 
 type JavaPodFinder struct {
-	options          *KubeJavaAppOptions
+	options *KubeJavaAppOptions
+
 	currentNameSpace string
 
 	genericclioptions.IOStreams
@@ -80,9 +96,9 @@ func NewListCmd(finder *JavaPodFinder) *cobra.Command {
 		Example: listExample,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			//TODO cmd should be processed by these step
-			_ = finder.Complete()
+			_ = finder.Complete(cmd)
 			_ = finder.Validate()
-			_ = finder.Run()
+			err = finder.Run()
 			return
 		},
 	}
@@ -97,30 +113,86 @@ func NewJavaPodFinder(IOStreams genericclioptions.IOStreams, options *KubeJavaAp
 }
 
 // handle user flags
-func (f *JavaPodFinder) Complete() error {
-
+func (f *JavaPodFinder) Complete(cmd *cobra.Command) error {
+	namespace, err := cmd.Flags().GetString("namespace")
+	if err != nil {
+		return err
+	}
+	f.currentNameSpace = namespace
+	f.printKubeConfigInfo()
 	return nil
 }
 
 // validate the provided flags
 func (f *JavaPodFinder) Validate() error {
-
 	return nil
 }
 
+// execute the cmd
 func (f *JavaPodFinder) Run() error {
-	f.addKubeConfigInfo()
-	_ = f.findJavaPods()
-	return nil
+	pods, err := f.findJavaPods()
+	if err != nil {
+		return err
+	}
+	table := buildTableToPrint(pods)
+	err = f.print(table)
+	return err
 }
 
-func (f *JavaPodFinder) addKubeConfigInfo() {
+// print user kubeconfig
+func (f *JavaPodFinder) printKubeConfigInfo() {
 	kubConfig := f.options.userKubConfig
-	_, currentNameSpace, _ := util.GetCurrentConfigInfo(kubConfig)
-	f.currentNameSpace = currentNameSpace
+	currentContext, currentNameSpace, masterURL := util.GetCurrentConfigInfo(kubConfig)
+	// namespace form user kubeconfig
+	if len(f.currentNameSpace) == 0 {
+		f.currentNameSpace = currentNameSpace
+	}
+	fmt.Printf("context:%s\tnameSpace:%s\tmaserURL:%s\n", util.Yellow(currentContext), util.Yellow(f.currentNameSpace), util.Yellow(masterURL))
 }
 
-func (f *JavaPodFinder) findJavaPods() error {
+// find pods that running java  application
+func (f *JavaPodFinder) findJavaPods() ([]corev1.Pod, error) {
+	podInfo, err := f.options.clientSet.
+		CoreV1().
+		Pods(f.currentNameSpace).
+		List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	pods := podInfo.Items
+	//TODO check the java pod and do filter
+	return pods, nil
+}
 
-	return nil
+// print table to the console
+func (f *JavaPodFinder) print(table *metav1.Table) error {
+	printer := printers.NewTablePrinter(printers.PrintOptions{})
+	return printer.PrintObj(table, f.Out)
+}
+
+// build table for printer
+func buildTableToPrint(pods []corev1.Pod) *metav1.Table {
+	length := len(columnDefinitions)
+	rows := make([]metav1.TableRow, len(pods))
+	for i, pod := range pods {
+		podStatus := pod.Status
+		containerStatuses := podStatus.ContainerStatuses
+		row, containers := make([]interface{}, length, length), make([]string, len(containerStatuses))
+		for index, status := range containerStatuses {
+			containers[index] = util.Cyan(status.Name)
+		}
+		// column: name
+		row[0] = pod.Name
+		// column: status
+		row[1] = podStatus.Phase
+		// column: containers
+		row[2] = containers
+		// fill table cells with row
+		rows[i].Cells = row
+	}
+	table := &metav1.Table{
+		ColumnDefinitions: columnDefinitions,
+		Rows:              rows,
+	}
+	return table
 }
