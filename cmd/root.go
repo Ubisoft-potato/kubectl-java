@@ -71,6 +71,15 @@ var (
 	%[1]s java list`
 )
 
+//cmd options
+type KubeJavaAppOptions struct {
+	configFlags   *genericclioptions.ConfigFlags
+	userKubConfig clientcmdapi.Config
+	clientSet     *kubernetes.Clientset
+
+	genericclioptions.IOStreams
+}
+
 // New kubectl-java main cmd
 func NewKubeJavaCmd(streams genericclioptions.IOStreams) *cobra.Command {
 	options := NewKubeJavaAppOptions(streams)
@@ -93,14 +102,6 @@ func NewKubeJavaCmd(streams genericclioptions.IOStreams) *cobra.Command {
 	rootCmd.AddCommand(NewListCmd(podFinder))
 
 	return rootCmd
-}
-
-//cmd options
-type KubeJavaAppOptions struct {
-	configFlags   *genericclioptions.ConfigFlags
-	userKubConfig clientcmdapi.Config
-	clientSet     *kubernetes.Clientset
-	genericclioptions.IOStreams
 }
 
 func NewKubeJavaAppOptions(IOStreams genericclioptions.IOStreams) *KubeJavaAppOptions {

@@ -47,80 +47,13 @@
  *
  */
 
-package cmd
+package util
 
-import (
-	"github.com/cyka/kubectl-java/util"
-	"github.com/spf13/cobra"
+import "github.com/fatih/color"
 
-	"k8s.io/cli-runtime/pkg/genericclioptions"
-)
-
+// console color string format func
 var (
-	// command info
-	listUsage   = "list [flags]"
-	listShort   = "List All Pods That Running Java Application"
-	listLong    = "List All Pods That Running Java Application"
-	listExample = ``
+	Cyan   = color.New(color.FgCyan).SprintfFunc()
+	Yellow = color.New(color.FgYellow).SprintFunc()
+	Red    = color.New(color.FgRed).SprintFunc()
 )
-
-type JavaPodFinder struct {
-	options          *KubeJavaAppOptions
-	currentNameSpace string
-
-	genericclioptions.IOStreams
-}
-
-//New kubectl-java list sub cmd
-func NewListCmd(finder *JavaPodFinder) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:     listUsage,
-		Short:   listShort,
-		Long:    listLong,
-		Example: listExample,
-		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			//TODO cmd should be processed by these step
-			_ = finder.Complete()
-			_ = finder.Validate()
-			_ = finder.Run()
-			return
-		},
-	}
-	return cmd
-}
-
-func NewJavaPodFinder(IOStreams genericclioptions.IOStreams, options *KubeJavaAppOptions) *JavaPodFinder {
-	return &JavaPodFinder{
-		options:   options,
-		IOStreams: IOStreams,
-	}
-}
-
-// handle user flags
-func (f *JavaPodFinder) Complete() error {
-
-	return nil
-}
-
-// validate the provided flags
-func (f *JavaPodFinder) Validate() error {
-
-	return nil
-}
-
-func (f *JavaPodFinder) Run() error {
-	f.addKubeConfigInfo()
-	_ = f.findJavaPods()
-	return nil
-}
-
-func (f *JavaPodFinder) addKubeConfigInfo() {
-	kubConfig := f.options.userKubConfig
-	_, currentNameSpace, _ := util.GetCurrentConfigInfo(kubConfig)
-	f.currentNameSpace = currentNameSpace
-}
-
-func (f *JavaPodFinder) findJavaPods() error {
-
-	return nil
-}
