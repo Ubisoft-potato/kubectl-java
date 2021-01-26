@@ -1,11 +1,8 @@
 <h1 align="center">The Kubectl Java Plugin</h1>
 
-
 ![version][go-shield]
 ![commit][commit-shield]
 ![LICENSE][license-shield]
-
-
 
 <!-- TABLE OF CONTENTS -->
 <details open="open">
@@ -44,7 +41,7 @@ TODO
 ### Built With
 
 * [cobra](https://github.com/spf13/cobra)
-* [go-pretty](https://github.com/jedib0t/go-pretty)
+* [color](https://github.com/fatih/color)
 
 <!-- GETTING STARTED -->
 
@@ -110,9 +107,10 @@ Project Link: [https://github.com/Ubisoft-potato/kubectl-java](https://github.co
 ## Acknowledgements
 
 * [client-go](https://github.com/kubernetes/client-go)
+* [cli-runtime](https://github.com/kubernetes/cli-runtime)
 
-[go-shield]: https://img.shields.io/github/go-mod/go-version/Ubisoft-potato/kubectl-java?style=for-the-badge
+[go-shield]: https://img.shields.io/github/go-mod/go-version/Ubisoft-potato/kubectl-java
 
-[commit-shield]: https://img.shields.io/github/last-commit/Ubisoft-potato/kubectl-java?style=for-the-badge
+[commit-shield]: https://img.shields.io/github/last-commit/Ubisoft-potato/kubectl-java
 
-[license-shield]: https://img.shields.io/badge/license-Anti%20996-blue.svg?style=for-the-badge
+[license-shield]: https://img.shields.io/badge/license-Anti%20996-blue.svg
