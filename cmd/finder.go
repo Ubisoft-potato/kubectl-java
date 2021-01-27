@@ -52,31 +52,28 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/gosuri/uitable"
+
 	"github.com/cyka/kubectl-java/util"
 	"github.com/spf13/cobra"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/cli-runtime/pkg/printers"
 )
 
 var (
 	// command info
 	listUsage   = "list [flags]"
-	listShort   = "List All Pods That Running Java Application"
-	listLong    = "List All Pods That Running Java Application"
+	listShort   = "List Pods That Running Java Application"
+	listLong    = "List Pods That Running Java Application"
 	listExample = `
 	just get pods that running java application
 	`
 )
 
 var (
-	columnDefinitions = []metav1.TableColumnDefinition{
-		{Name: "name", Type: "string"},
-		{Name: "status", Type: "string"},
-		{Name: "containers", Type: "array"},
-	}
+	headers = []interface{}{"NAME", "NODE", "STATUS", "CONTAINERS"}
 )
 
 type JavaPodFinder struct {
@@ -134,8 +131,8 @@ func (f *JavaPodFinder) Run() error {
 	if err != nil {
 		return err
 	}
-	table := buildTableToPrint(pods)
-	err = f.print(table)
+	tableToPrint := buildTableToPrint(pods)
+	err = f.print(tableToPrint)
 	return err
 }
 
@@ -143,7 +140,7 @@ func (f *JavaPodFinder) Run() error {
 func (f *JavaPodFinder) printKubeConfigInfo() {
 	kubConfig := f.options.userKubConfig
 	currentContext, currentNameSpace, masterURL := util.GetCurrentConfigInfo(kubConfig)
-	// namespace form user kubeconfig
+	// namespace from user kubeconfig
 	if len(f.currentNameSpace) == 0 {
 		f.currentNameSpace = currentNameSpace
 	}
@@ -165,34 +162,37 @@ func (f *JavaPodFinder) findJavaPods() ([]corev1.Pod, error) {
 }
 
 // print table to the console
-func (f *JavaPodFinder) print(table *metav1.Table) error {
-	printer := printers.NewTablePrinter(printers.PrintOptions{})
-	return printer.PrintObj(table, f.Out)
+func (f *JavaPodFinder) print(table *uitable.Table) error {
+	// TODO add flags to control width
+	table.MaxColWidth = 80
+	_, err := fmt.Fprintln(f.Out, table)
+	return err
 }
 
 // build table for printer
-func buildTableToPrint(pods []corev1.Pod) *metav1.Table {
-	length := len(columnDefinitions)
+func buildTableToPrint(pods []corev1.Pod) *uitable.Table {
+	length := len(headers)
+	table := uitable.New()
+	table.AddRow(headers...)
 	rows := make([]metav1.TableRow, len(pods))
 	for i, pod := range pods {
 		podStatus := pod.Status
 		containerStatuses := podStatus.ContainerStatuses
 		row, containers := make([]interface{}, length, length), make([]string, len(containerStatuses))
 		for index, status := range containerStatuses {
-			containers[index] = util.Cyan(status.Name)
+			containers[index] = util.HiCyan(status.Name)
 		}
 		// column: name
 		row[0] = pod.Name
+		// column: node
+		row[1] = pod.Spec.NodeName
 		// column: status
-		row[1] = podStatus.Phase
+		row[2] = util.ColorizePodStatus(podStatus.Phase)
 		// column: containers
-		row[2] = containers
+		row[3] = containers
 		// fill table cells with row
 		rows[i].Cells = row
-	}
-	table := &metav1.Table{
-		ColumnDefinitions: columnDefinitions,
-		Rows:              rows,
+		table.AddRow(row...)
 	}
 	return table
 }

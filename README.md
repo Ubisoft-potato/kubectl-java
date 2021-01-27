@@ -42,6 +42,7 @@ TODO
 
 * [cobra](https://github.com/spf13/cobra)
 * [color](https://github.com/fatih/color)
+* [uitable](https://github.com/gosuri/uitable)
 
 <!-- GETTING STARTED -->
 
