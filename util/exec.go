@@ -48,35 +48,3 @@
  */
 
 package util
-
-import (
-	"github.com/fatih/color"
-
-	corev1 "k8s.io/api/core/v1"
-)
-
-// console color string format func
-var (
-	Cyan    = color.New(color.FgCyan).SprintfFunc()
-	HiCyan  = color.New(color.FgHiCyan).SprintfFunc()
-	Yellow  = color.New(color.FgYellow).SprintFunc()
-	Red     = color.New(color.FgRed).SprintFunc()
-	Green   = color.New(color.FgGreen).SprintFunc()
-	Magenta = color.New(color.FgHiMagenta).SprintFunc()
-)
-
-func ColorizePodStatus(status corev1.PodPhase) (s string) {
-	switch status {
-	case corev1.PodRunning:
-		s = Cyan(string(status))
-	case corev1.PodSucceeded:
-		s = Green(string(status))
-	case corev1.PodPending:
-		s = Magenta(string(status))
-	case corev1.PodFailed:
-		s = Red(string(status))
-	case corev1.PodUnknown:
-		s = Yellow(string(status))
-	}
-	return
-}

@@ -52,9 +52,9 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/gosuri/uitable"
 
 	"github.com/cyka/kubectl-java/util"
+	"github.com/gosuri/uitable"
 	"github.com/spf13/cobra"
 
 	corev1 "k8s.io/api/core/v1"
@@ -79,13 +79,14 @@ var (
 type JavaPodFinder struct {
 	options *KubeJavaAppOptions
 
-	currentNameSpace string
+	nameSpace   string
+	columnWidth *uint
 
 	genericclioptions.IOStreams
 }
 
 //New kubectl-java list sub cmd
-func NewListCmd(finder *JavaPodFinder) *cobra.Command {
+func NewListCmd(f *JavaPodFinder) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     listUsage,
 		Short:   listShort,
@@ -93,12 +94,13 @@ func NewListCmd(finder *JavaPodFinder) *cobra.Command {
 		Example: listExample,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			//TODO cmd should be processed by these step
-			_ = finder.Complete(cmd)
-			_ = finder.Validate()
-			err = finder.Run()
+			_ = f.Complete(cmd)
+			_ = f.Validate()
+			err = f.Run()
 			return
 		},
 	}
+	f.columnWidth = cmd.Flags().UintP("colWidth", "w", 80, "colWidth used to set the table column width")
 	return cmd
 }
 
@@ -115,7 +117,7 @@ func (f *JavaPodFinder) Complete(cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
-	f.currentNameSpace = namespace
+	f.nameSpace = namespace
 	f.printKubeConfigInfo()
 	return nil
 }
@@ -141,17 +143,17 @@ func (f *JavaPodFinder) printKubeConfigInfo() {
 	kubConfig := f.options.userKubConfig
 	currentContext, currentNameSpace, masterURL := util.GetCurrentConfigInfo(kubConfig)
 	// namespace from user kubeconfig
-	if len(f.currentNameSpace) == 0 {
-		f.currentNameSpace = currentNameSpace
+	if len(f.nameSpace) == 0 {
+		f.nameSpace = currentNameSpace
 	}
-	fmt.Printf("context:%s\tnameSpace:%s\tmaserURL:%s\n", util.Yellow(currentContext), util.Yellow(f.currentNameSpace), util.Yellow(masterURL))
+	fmt.Printf("context:%s\tnameSpace:%s\tmaserURL:%s\n", util.Yellow(currentContext), util.Yellow(f.nameSpace), util.Yellow(masterURL))
 }
 
 // find pods that running java  application
 func (f *JavaPodFinder) findJavaPods() ([]corev1.Pod, error) {
 	podInfo, err := f.options.clientSet.
 		CoreV1().
-		Pods(f.currentNameSpace).
+		Pods(f.nameSpace).
 		List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -161,14 +163,6 @@ func (f *JavaPodFinder) findJavaPods() ([]corev1.Pod, error) {
 	return pods, nil
 }
 
-// print table to the console
-func (f *JavaPodFinder) print(table *uitable.Table) error {
-	// TODO add flags to control width
-	table.MaxColWidth = 80
-	_, err := fmt.Fprintln(f.Out, table)
-	return err
-}
-
 // build table for printer
 func buildTableToPrint(pods []corev1.Pod) *uitable.Table {
 	length := len(headers)
@@ -176,7 +170,7 @@ func buildTableToPrint(pods []corev1.Pod) *uitable.Table {
 	table.AddRow(headers...)
 	rows := make([]metav1.TableRow, len(pods))
 	for i, pod := range pods {
-		podStatus := pod.Status
+		podStatus, podSpec := pod.Status, pod.Spec
 		containerStatuses := podStatus.ContainerStatuses
 		row, containers := make([]interface{}, length, length), make([]string, len(containerStatuses))
 		for index, status := range containerStatuses {
@@ -185,7 +179,7 @@ func buildTableToPrint(pods []corev1.Pod) *uitable.Table {
 		// column: name
 		row[0] = pod.Name
 		// column: node
-		row[1] = pod.Spec.NodeName
+		row[1] = podSpec.NodeName
 		// column: status
 		row[2] = util.ColorizePodStatus(podStatus.Phase)
 		// column: containers
@@ -195,4 +189,11 @@ func buildTableToPrint(pods []corev1.Pod) *uitable.Table {
 		table.AddRow(row...)
 	}
 	return table
+}
+
+// print table to the console
+func (f *JavaPodFinder) print(table *uitable.Table) error {
+	table.MaxColWidth = *f.columnWidth
+	_, err := fmt.Fprintln(f.Out, table)
+	return err
 }
