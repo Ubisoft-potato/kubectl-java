@@ -36,12 +36,17 @@
 
 ## About The Project
 
-TODO
+The kubectl java plugin aims to make you life easier while develop java application with k8s:
+
+* find pods that running java application (👨🏻‍💻working now)
+* export jvm debug port and do port-forward directly
+* more future...
 
 ### Built With
 
 * [cobra](https://github.com/spf13/cobra)
 * [color](https://github.com/fatih/color)
+* [uitable](https://github.com/gosuri/uitable)
 
 <!-- GETTING STARTED -->
 
