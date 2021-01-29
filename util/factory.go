@@ -47,88 +47,21 @@
  *
  */
 
-package cmd
+package util
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-
-	"github.com/cyka/kubectl-java/cmd/list"
-	"github.com/cyka/kubectl-java/util"
-	"github.com/spf13/cobra"
-
-	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/util/homedir"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-var (
-	usage            = "kubectl-java [command]"
-	version          = "v1.0.0"
-	shortDescription = "The Kubectl Plugin For Java Application"
-	longDescription  = "The Kubectl Plugin For Java Application"
-	exampleUsage     = `
-	# list pods that running java application
-	%[1]s java list`
-)
-
-// New kubectl-java main cmd
-func NewKubeJavaCmd(streams genericclioptions.IOStreams) *cobra.Command {
-
-	flags := genericclioptions.NewConfigFlags(true)
-	flags.KubeConfig = getLocalKubeConfigPath()
-
-	cmdFactory, err := buildCmdFactory(flags)
-	if err != nil {
-		// TODO handle kube err
-		os.Exit(-1)
-	}
-
-	rootCmd := &cobra.Command{
-		Use:     usage,
-		Short:   shortDescription,
-		Long:    longDescription,
-		Version: version,
-		Example: fmt.Sprintf(exampleUsage, "kubectl"),
-	}
-	// add flags
-	flags.AddFlags(rootCmd.PersistentFlags())
-	// find java pod cmd
-	rootCmd.AddCommand(list.NewListCmd(cmdFactory, streams))
-
-	return rootCmd
+type CmdFactory struct {
+	UserKubConfig clientcmdapi.Config
+	ClientSet     *kubernetes.Clientset
 }
 
-func buildCmdFactory(flags *genericclioptions.ConfigFlags) (*util.CmdFactory, error) {
-
-	kubeConfigLoader := flags.ToRawKubeConfigLoader()
-	userKubConfig, rawErr := kubeConfigLoader.RawConfig()
-
-	if rawErr != nil {
-		return nil, rawErr
+func NewCmdFactory(userKubConfig clientcmdapi.Config, clientSet *kubernetes.Clientset) *CmdFactory {
+	return &CmdFactory{
+		UserKubConfig: userKubConfig,
+		ClientSet:     clientSet,
 	}
-
-	restConfig, _ := kubeConfigLoader.ClientConfig()
-	clientSet, clientErr := kubernetes.NewForConfig(restConfig)
-
-	if clientErr != nil {
-		return nil, clientErr
-	}
-
-	cmdFactory := util.NewCmdFactory(userKubConfig, clientSet)
-
-	return cmdFactory, nil
-}
-
-func getLocalKubeConfigPath() *string {
-	var kubeConfig *string
-	if home := homedir.HomeDir(); home != "" {
-		kubeConfig = stringPtr(filepath.Join(home, ".kube", "config"))
-	}
-	return kubeConfig
-}
-
-func stringPtr(val string) *string {
-	return &val
 }

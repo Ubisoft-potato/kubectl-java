@@ -65,18 +65,18 @@ var (
 	Magenta = color.New(color.FgHiMagenta).SprintFunc()
 )
 
-func ColorizePodStatus(status corev1.PodPhase) (s string) {
+func ColorizePodStatus(status corev1.PodPhase) (colorStatus string) {
 	switch status {
 	case corev1.PodRunning:
-		s = Cyan(string(status))
+		colorStatus = Cyan(string(status))
 	case corev1.PodSucceeded:
-		s = Green(string(status))
+		colorStatus = Green(string(status))
 	case corev1.PodPending:
-		s = Magenta(string(status))
+		colorStatus = Magenta(string(status))
 	case corev1.PodFailed:
-		s = Red(string(status))
+		colorStatus = Red(string(status))
 	case corev1.PodUnknown:
-		s = Yellow(string(status))
+		colorStatus = Yellow(string(status))
 	}
 	return
 }

@@ -47,7 +47,7 @@
  *
  */
 
-package cmd
+package list
 
 import (
 	"context"
@@ -77,16 +77,21 @@ var (
 )
 
 type JavaPodFinder struct {
-	options *KubeJavaAppOptions
+	cmdFactory *util.CmdFactory
 
-	nameSpace   string
-	columnWidth *uint
+	nameSpace string
+	colWidth  uint
 
 	genericclioptions.IOStreams
 }
 
 //New kubectl-java list sub cmd
-func NewListCmd(f *JavaPodFinder) *cobra.Command {
+func NewListCmd(factory *util.CmdFactory, streams genericclioptions.IOStreams) *cobra.Command {
+	f := &JavaPodFinder{
+		cmdFactory: factory,
+		IOStreams:  streams,
+	}
+
 	cmd := &cobra.Command{
 		Use:     listUsage,
 		Short:   listShort,
@@ -100,15 +105,10 @@ func NewListCmd(f *JavaPodFinder) *cobra.Command {
 			return
 		},
 	}
-	f.columnWidth = cmd.Flags().UintP("colWidth", "w", 80, "colWidth used to set the table column width")
-	return cmd
-}
 
-func NewJavaPodFinder(IOStreams genericclioptions.IOStreams, options *KubeJavaAppOptions) *JavaPodFinder {
-	return &JavaPodFinder{
-		options:   options,
-		IOStreams: IOStreams,
-	}
+	cmd.Flags().UintVarP(&f.colWidth, "colWidth", "w", 80, "colWidth used to set the table column width")
+
+	return cmd
 }
 
 // handle user flags
@@ -140,18 +140,18 @@ func (f *JavaPodFinder) Run() error {
 
 // print user kubeconfig
 func (f *JavaPodFinder) printKubeConfigInfo() {
-	kubConfig := f.options.userKubConfig
+	kubConfig := f.cmdFactory.UserKubConfig
 	currentContext, currentNameSpace, masterURL := util.GetCurrentConfigInfo(kubConfig)
 	// namespace from user kubeconfig
 	if len(f.nameSpace) == 0 {
 		f.nameSpace = currentNameSpace
 	}
-	fmt.Printf("context:%s\tnameSpace:%s\tmaserURL:%s\n", util.Yellow(currentContext), util.Yellow(f.nameSpace), util.Yellow(masterURL))
+	_, _ = fmt.Fprintf(f.Out, "context:%s\tnameSpace:%s\tmaserURL:%s\n", util.Yellow(currentContext), util.Yellow(f.nameSpace), util.Yellow(masterURL))
 }
 
 // find pods that running java  application
 func (f *JavaPodFinder) findJavaPods() ([]corev1.Pod, error) {
-	podInfo, err := f.options.clientSet.
+	podInfo, err := f.cmdFactory.ClientSet.
 		CoreV1().
 		Pods(f.nameSpace).
 		List(context.TODO(), metav1.ListOptions{})
@@ -193,7 +193,7 @@ func buildTableToPrint(pods []corev1.Pod) *uitable.Table {
 
 // print table to the console
 func (f *JavaPodFinder) print(table *uitable.Table) error {
-	table.MaxColWidth = *f.columnWidth
+	table.MaxColWidth = f.colWidth
 	_, err := fmt.Fprintln(f.Out, table)
 	return err
 }
