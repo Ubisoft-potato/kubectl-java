@@ -47,88 +47,64 @@
  *
  */
 
-package cmd
+package list
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
+	"reflect"
+	"testing"
 
-	"github.com/cyka/kubectl-java/cmd/list"
 	"github.com/cyka/kubectl-java/util"
-	"github.com/spf13/cobra"
+	"github.com/gosuri/uitable"
 
-	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/util/homedir"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var (
-	usage            = "kubectl-java [command]"
-	version          = "v1.0.0"
-	shortDescription = "The Kubectl Plugin For Java Application"
-	longDescription  = "The Kubectl Plugin For Java Application"
-	exampleUsage     = `
-	# list pods that running java application
-	%[1]s java list`
-)
-
-// New kubectl-java main cmd
-func NewKubeJavaCmd(streams genericclioptions.IOStreams) *cobra.Command {
-
-	flags := genericclioptions.NewConfigFlags(true)
-	flags.KubeConfig = getLocalKubeConfigPath()
-
-	cmdFactory, err := buildCmdFactory(flags)
-	if err != nil {
-		// TODO handle kube err
-		os.Exit(-1)
+func Test_buildTableToPrint(t *testing.T) {
+	type args struct {
+		pods []corev1.Pod
 	}
 
-	rootCmd := &cobra.Command{
-		Use:     usage,
-		Short:   shortDescription,
-		Long:    longDescription,
-		Version: version,
-		Example: fmt.Sprintf(exampleUsage, "kubectl"),
+	buildTable := uitable.New()
+	buildTable.AddRow(headers...)
+	buildTable.AddRow([]interface{}{"podName", "node-01", util.Cyan("Running"), []string{util.HiCyan("nginx-web")}}...)
+
+	tests := []struct {
+		name string
+		args args
+		want *uitable.Table
+	}{
+		{
+			name: "buildTable",
+			args: args{
+				pods: []corev1.Pod{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "podName",
+						},
+						Spec: corev1.PodSpec{
+							NodeName: "node-01",
+						},
+						Status: corev1.PodStatus{
+							Phase: corev1.PodRunning,
+							ContainerStatuses: []corev1.ContainerStatus{
+								{
+									Name: "nginx-web",
+								},
+							},
+						},
+					},
+				},
+			},
+			want: buildTable,
+		},
 	}
-	// add flags
-	flags.AddFlags(rootCmd.PersistentFlags())
-	// find java pod cmd
-	rootCmd.AddCommand(list.NewListCmd(cmdFactory, streams))
 
-	return rootCmd
-}
-
-func buildCmdFactory(flags *genericclioptions.ConfigFlags) (*util.CmdFactory, error) {
-
-	kubeConfigLoader := flags.ToRawKubeConfigLoader()
-	userKubConfig, rawErr := kubeConfigLoader.RawConfig()
-
-	if rawErr != nil {
-		return nil, rawErr
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := buildTableToPrint(tt.args.pods); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("buildTableToPrint() = %v, want %v", got, tt.want)
+			}
+		})
 	}
-
-	restConfig, _ := kubeConfigLoader.ClientConfig()
-	clientSet, clientErr := kubernetes.NewForConfig(restConfig)
-
-	if clientErr != nil {
-		return nil, clientErr
-	}
-
-	cmdFactory := util.NewCmdFactory(userKubConfig, clientSet)
-
-	return cmdFactory, nil
-}
-
-func getLocalKubeConfigPath() *string {
-	var kubeConfig *string
-	if home := homedir.HomeDir(); home != "" {
-		kubeConfig = stringPtr(filepath.Join(home, ".kube", "config"))
-	}
-	return kubeConfig
-}
-
-func stringPtr(val string) *string {
-	return &val
 }
