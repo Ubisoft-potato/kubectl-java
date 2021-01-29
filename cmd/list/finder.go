@@ -78,6 +78,7 @@ var (
 
 type JavaPodFinder struct {
 	cmdFactory *util.CmdFactory
+	Executor   util.RemoteExecutor
 
 	nameSpace string
 	colWidth  uint
@@ -90,6 +91,7 @@ func NewListCmd(factory *util.CmdFactory, streams genericclioptions.IOStreams) *
 	f := &JavaPodFinder{
 		cmdFactory: factory,
 		IOStreams:  streams,
+		Executor:   util.DefaultRemoteExecutor{},
 	}
 
 	cmd := &cobra.Command{
