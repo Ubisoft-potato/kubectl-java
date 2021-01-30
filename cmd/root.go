@@ -116,7 +116,7 @@ func buildCmdFactory(flags *genericclioptions.ConfigFlags) (*util.CmdFactory, er
 		return nil, clientErr
 	}
 
-	cmdFactory := util.NewCmdFactory(userKubConfig, restConfig, clientSet, clientSet.RESTClient())
+	cmdFactory := util.NewCmdFactory(userKubConfig, restConfig, clientSet)
 
 	return cmdFactory, nil
 }

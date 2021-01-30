@@ -50,8 +50,11 @@
 package list
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"strings"
+	"sync"
 
 	"github.com/cyka/kubectl-java/util"
 	"github.com/gosuri/uitable"
@@ -60,6 +63,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 )
 
 var (
@@ -74,11 +79,12 @@ var (
 
 var (
 	headers = []interface{}{"NAME", "NODE", "STATUS", "CONTAINERS"}
+	wg      = sync.WaitGroup{}
 )
 
 type JavaPodFinder struct {
 	cmdFactory *util.CmdFactory
-	Executor   util.RemoteExecutor
+	executor   util.RemoteExecutor
 
 	nameSpace string
 	colWidth  uint
@@ -91,7 +97,7 @@ func NewListCmd(factory *util.CmdFactory, streams genericclioptions.IOStreams) *
 	f := &JavaPodFinder{
 		cmdFactory: factory,
 		IOStreams:  streams,
-		Executor:   util.DefaultRemoteExecutor{},
+		executor:   util.DefaultRemoteExecutor{},
 	}
 
 	cmd := &cobra.Command{
@@ -153,16 +159,68 @@ func (f *JavaPodFinder) printKubeConfigInfo() {
 
 // find pods that running java  application
 func (f *JavaPodFinder) findJavaPods() ([]corev1.Pod, error) {
-	podInfo, err := f.cmdFactory.ClientSet.
-		CoreV1().
-		Pods(f.nameSpace).
-		List(context.TODO(), metav1.ListOptions{})
+	coreV1Client := f.cmdFactory.ClientSet.CoreV1()
+	podInfo, err := coreV1Client.Pods(f.nameSpace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
+
 	pods := podInfo.Items
-	//TODO check the java pod and do filter
-	return pods, nil
+	restClient := coreV1Client.RESTClient()
+	javaPods, podChan := make([]corev1.Pod, 0, len(pods)), make(chan corev1.Pod)
+
+	for _, pod := range pods {
+		wg.Add(1)
+		go f.filterJavaPod(restClient, pod, podChan)
+	}
+
+	go func() {
+		wg.Wait()
+		close(podChan)
+	}()
+
+	for pod := range podChan {
+		javaPods = append(javaPods, pod)
+	}
+
+	return javaPods, nil
+}
+
+// filter the pod that not running java application
+func (f *JavaPodFinder) filterJavaPod(client rest.Interface, pod corev1.Pod, podChan chan corev1.Pod) {
+	defer wg.Done()
+	req := client.Post().
+		Resource("pods").
+		SubResource("exec").
+		Namespace(f.nameSpace)
+	containers := pod.Spec.Containers
+	containersRunningJavaApp := make([]corev1.Container, 0, len(containers))
+	for _, container := range containers {
+		var javaCmdOutput, javaCmdErrOutput bytes.Buffer
+		req.Name(pod.Name).
+			VersionedParams(&corev1.PodExecOptions{
+				TypeMeta:  metav1.TypeMeta{},
+				Stdin:     false,
+				Stdout:    true,
+				Stderr:    true,
+				TTY:       false,
+				Container: container.Name,
+				Command:   []string{"java", "-version"},
+			}, scheme.ParameterCodec)
+		err := f.executor.Execute("POST", req.URL(), f.cmdFactory.ClientConfig, nil, &javaCmdOutput, &javaCmdErrOutput, false, nil)
+		if err != nil {
+			_ = fmt.Errorf("command exec error: %s", err)
+		}
+
+		errOutput := javaCmdErrOutput.String()
+		if strings.Contains(errOutput, "jdk") {
+			containersRunningJavaApp = append(containersRunningJavaApp, container)
+		}
+	}
+	if len(containersRunningJavaApp) > 0 {
+		pod.Spec.Containers = containersRunningJavaApp
+		podChan <- pod
+	}
 }
 
 // build table for printer

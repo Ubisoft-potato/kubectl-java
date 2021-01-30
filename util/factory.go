@@ -51,7 +51,6 @@ package util
 
 import (
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	restclient "k8s.io/client-go/rest"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -60,14 +59,13 @@ type CmdFactory struct {
 	UserKubConfig clientcmdapi.Config
 	ClientConfig  *restclient.Config
 
-	ClientSet  kubernetes.Interface
-	RESTClient rest.Interface
+	ClientSet kubernetes.Interface
 }
 
-func NewCmdFactory(userKubConfig clientcmdapi.Config, clientConfig *restclient.Config, clientSet kubernetes.Interface, RESTClient rest.Interface) *CmdFactory {
+func NewCmdFactory(userKubConfig clientcmdapi.Config, clientConfig *restclient.Config, clientSet kubernetes.Interface) *CmdFactory {
 	return &CmdFactory{
 		UserKubConfig: userKubConfig,
 		ClientConfig:  clientConfig,
 		ClientSet:     clientSet,
-		RESTClient:    RESTClient}
+	}
 }
