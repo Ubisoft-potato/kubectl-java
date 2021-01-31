@@ -2,7 +2,7 @@
 
 ![version][go-shield]
 ![commit][commit-shield]
-![LICENSE][license-shield]
+[![LICENSE][license-shield]][anti-996-url]
 
 <!-- TABLE OF CONTENTS -->
 <details open="open">
@@ -119,3 +119,5 @@ Project Link: [https://github.com/Ubisoft-potato/kubectl-java](https://github.co
 [commit-shield]: https://img.shields.io/github/last-commit/Ubisoft-potato/kubectl-java
 
 [license-shield]: https://img.shields.io/badge/license-Anti%20996-blue.svg
+
+[anti-996-url]: https://github.com/kattgu7/Anti-996-License
