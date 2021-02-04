@@ -2,7 +2,9 @@
 
 ![version][go-shield]
 ![commit][commit-shield]
+[![Go Report Card](https://goreportcard.com/badge/github.com/Ubisoft-potato/kubectl-java)](https://goreportcard.com/report/github.com/Ubisoft-potato/kubectl-java)
 [![LICENSE][license-shield]][anti-996-url]
+
 
 <!-- TABLE OF CONTENTS -->
 <details open="open">
