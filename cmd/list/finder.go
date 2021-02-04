@@ -163,7 +163,7 @@ func (f *JavaPodFinder) printKubeConfigInfo() {
 	if len(f.nameSpace) == 0 {
 		f.nameSpace = currentNameSpace
 	}
-	_, _ = fmt.Fprintf(f.Out, "context:%s\tnameSpace:%s\tmaserURL:%s\n", util.Yellow(currentContext), util.Yellow(f.nameSpace), util.Yellow(masterURL))
+	_, _ = fmt.Fprintf(f.Out, "context:%s\tnamespace:%s\tmaserURL:%s\n", util.Yellow(currentContext), util.Yellow(f.nameSpace), util.Yellow(masterURL))
 }
 
 // find pods that running java  application
@@ -179,8 +179,8 @@ func (f *JavaPodFinder) findJavaPods() ([]JavaPod, error) {
 	restClient := coreV1Client.RESTClient()
 	javaPods, podChan := make([]JavaPod, 0, len(pods)), make(chan JavaPod)
 
+	wg.Add(len(pods))
 	for _, pod := range pods {
-		wg.Add(1)
 		go f.filterJavaPod(restClient, pod, podChan)
 	}
 
