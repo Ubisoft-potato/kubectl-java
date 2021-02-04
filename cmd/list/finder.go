@@ -73,12 +73,16 @@ var (
 	listShort   = "List Pods That Running Java Application"
 	listLong    = "List Pods That Running Java Application"
 	listExample = `
-	just get pods that running java application
-	`
+	# just get pods that running java application
+	%[1]s java list
+	# specify the namespace
+	%[1]s java list -n namespace
+	# custom table column width
+	%[1]s java list -w 80`
 )
 
 var (
-	headers = []interface{}{"NAME", "NODE", "STATUS", "CONTAINERS"}
+	headers = []interface{}{"NAME", "NODE", "STATUS", "CONTAINERS", "JDK"}
 	wg      = sync.WaitGroup{}
 )
 
@@ -90,6 +94,11 @@ type JavaPodFinder struct {
 	colWidth  uint
 
 	genericclioptions.IOStreams
+}
+
+type JavaPod struct {
+	pod        corev1.Pod
+	jdkVersion string
 }
 
 //New kubectl-java list sub cmd
@@ -104,7 +113,7 @@ func NewListCmd(factory *util.CmdFactory, streams genericclioptions.IOStreams) *
 		Use:     listUsage,
 		Short:   listShort,
 		Long:    listLong,
-		Example: listExample,
+		Example: fmt.Sprintf(listExample, "kubectl"),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			//TODO cmd should be processed by these step
 			_ = f.Complete(cmd)
@@ -154,23 +163,24 @@ func (f *JavaPodFinder) printKubeConfigInfo() {
 	if len(f.nameSpace) == 0 {
 		f.nameSpace = currentNameSpace
 	}
-	_, _ = fmt.Fprintf(f.Out, "context:%s\tnameSpace:%s\tmaserURL:%s\n", util.Yellow(currentContext), util.Yellow(f.nameSpace), util.Yellow(masterURL))
+	_, _ = fmt.Fprintf(f.Out, "context:%s\tnamespace:%s\tmaserURL:%s\n", util.Yellow(currentContext), util.Yellow(f.nameSpace), util.Yellow(masterURL))
 }
 
 // find pods that running java  application
-func (f *JavaPodFinder) findJavaPods() ([]corev1.Pod, error) {
+func (f *JavaPodFinder) findJavaPods() ([]JavaPod, error) {
 	coreV1Client := f.cmdFactory.ClientSet.CoreV1()
-	podInfo, err := coreV1Client.Pods(f.nameSpace).List(context.TODO(), metav1.ListOptions{})
+	podInfo, err := coreV1Client.Pods(corev1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
+
 	if err != nil {
 		return nil, err
 	}
 
 	pods := podInfo.Items
 	restClient := coreV1Client.RESTClient()
-	javaPods, podChan := make([]corev1.Pod, 0, len(pods)), make(chan corev1.Pod)
+	javaPods, podChan := make([]JavaPod, 0, len(pods)), make(chan JavaPod)
 
+	wg.Add(len(pods))
 	for _, pod := range pods {
-		wg.Add(1)
 		go f.filterJavaPod(restClient, pod, podChan)
 	}
 
@@ -187,17 +197,18 @@ func (f *JavaPodFinder) findJavaPods() ([]corev1.Pod, error) {
 }
 
 // filter the pod that not running java application
-func (f *JavaPodFinder) filterJavaPod(client rest.Interface, pod corev1.Pod, podChan chan corev1.Pod) {
+func (f *JavaPodFinder) filterJavaPod(client rest.Interface, pod corev1.Pod, podChan chan JavaPod) {
 	defer wg.Done()
-	req := client.Post().
-		Resource("pods").
-		SubResource("exec").
-		Namespace(f.nameSpace)
 	containers := pod.Spec.Containers
 	containersRunningJavaApp := make([]corev1.Container, 0, len(containers))
+	var jdkVersion string
 	for _, container := range containers {
 		var javaCmdOutput, javaCmdErrOutput bytes.Buffer
-		req.Name(pod.Name).
+		req := client.Post().
+			Resource("pods").
+			SubResource("exec").
+			Namespace(pod.Namespace).
+			Name(pod.Name).
 			VersionedParams(&corev1.PodExecOptions{
 				TypeMeta:  metav1.TypeMeta{},
 				Stdin:     false,
@@ -211,31 +222,38 @@ func (f *JavaPodFinder) filterJavaPod(client rest.Interface, pod corev1.Pod, pod
 		if err != nil {
 			_ = fmt.Errorf("command exec error: %s", err)
 		}
-
 		errOutput := javaCmdErrOutput.String()
 		if strings.Contains(errOutput, "jdk") {
 			containersRunningJavaApp = append(containersRunningJavaApp, container)
+			jdkVersion = strings.Split(errOutput, "\n")[0]
 		}
 	}
 	if len(containersRunningJavaApp) > 0 {
 		pod.Spec.Containers = containersRunningJavaApp
-		podChan <- pod
+		podChan <- JavaPod{
+			pod:        pod,
+			jdkVersion: jdkVersion,
+		}
 	}
 }
 
 // build table for printer
-func buildTableToPrint(pods []corev1.Pod) *uitable.Table {
-	length := len(headers)
+func buildTableToPrint(javaPods []JavaPod) *uitable.Table {
+	cols := len(headers)
 	table := uitable.New()
 	table.AddRow(headers...)
-	rows := make([]metav1.TableRow, len(pods))
-	for i, pod := range pods {
+	rows := make([]metav1.TableRow, len(javaPods))
+
+	for i, javaPod := range javaPods {
+		pod := javaPod.pod
 		podStatus, podSpec := pod.Status, pod.Spec
 		containerStatuses := podStatus.ContainerStatuses
-		row, containers := make([]interface{}, length, length), make([]string, len(containerStatuses))
+		row, containers := make([]interface{}, cols, cols), make([]string, len(containerStatuses))
+
 		for index, status := range containerStatuses {
 			containers[index] = util.HiCyan(status.Name)
 		}
+
 		// column: name
 		row[0] = pod.Name
 		// column: node
@@ -244,10 +262,13 @@ func buildTableToPrint(pods []corev1.Pod) *uitable.Table {
 		row[2] = util.ColorizePodStatus(podStatus.Phase)
 		// column: containers
 		row[3] = containers
+		// column: jdkVersion
+		row[4] = javaPod.jdkVersion
 		// fill table cells with row
 		rows[i].Cells = row
 		table.AddRow(row...)
 	}
+
 	return table
 }
 

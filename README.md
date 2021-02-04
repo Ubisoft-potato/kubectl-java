@@ -2,7 +2,7 @@
 
 ![version][go-shield]
 ![commit][commit-shield]
-![LICENSE][license-shield]
+[![LICENSE][license-shield]][anti-996-url]
 
 <!-- TABLE OF CONTENTS -->
 <details open="open">
@@ -52,22 +52,41 @@ The kubectl java plugin aims to make you life easier while develop java applicat
 
 ## Getting Started
 
-TODO
-
 ### Prerequisites
 
-TODO
+* Kubernetes Environment
+    * [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl)
+* Go sdk (optional)
 
 ### Installation
 
-TODO
+* For developer
+
+```shell
+git clone git@github.com:Ubisoft-potato/kubectl-java.git 
+cd kubectl-java
+go build
+```
 
 <!-- USAGE EXAMPLES -->
 
 ## Usage
 
-TODO
+* find pods that running java application in your cluster
 
+```shell
+kubectl-java list
+```
+
+**output will look like:**
+
+```
+context:dev	namespace:dev	maserURL:https://192.168.123.123:6443
+NAME                                   	NODE      	STATUS 	CONTAINERS              	JDK
+user-service-64d4f59c54-w9rwr          	dev-01	        Running	[user-service]          	openjdk version "1.8.0_232"
+order-service-5654856bf6-9qb26     	dev-01	        Running	[order-service]     	        openjdk version "1.8.0_232"
+chat-service-58fd5b4bf-gq8wz            dev-01	        Running	[chat-service]           	openjdk version "1.8.0_232"
+```
 
 <!-- ROADMAP -->
 
@@ -119,3 +138,5 @@ Project Link: [https://github.com/Ubisoft-potato/kubectl-java](https://github.co
 [commit-shield]: https://img.shields.io/github/last-commit/Ubisoft-potato/kubectl-java
 
 [license-shield]: https://img.shields.io/badge/license-Anti%20996-blue.svg
+
+[anti-996-url]: https://github.com/kattgu7/Anti-996-License

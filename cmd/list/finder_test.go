@@ -50,24 +50,23 @@
 package list
 
 import (
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"reflect"
 	"testing"
 
 	"github.com/cyka/kubectl-java/util"
 	"github.com/gosuri/uitable"
-
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func Test_buildTableToPrint(t *testing.T) {
 	type args struct {
-		pods []corev1.Pod
+		javaPods []JavaPod
 	}
 
 	buildTable := uitable.New()
 	buildTable.AddRow(headers...)
-	buildTable.AddRow([]interface{}{"podName", "node-01", util.Cyan("Running"), []string{util.HiCyan("nginx-web")}}...)
+	buildTable.AddRow([]interface{}{"podName", "node-01", util.Cyan("Running"), []string{util.HiCyan("nginx-web")}, "1.8.0"}...)
 
 	tests := []struct {
 		name string
@@ -77,22 +76,25 @@ func Test_buildTableToPrint(t *testing.T) {
 		{
 			name: "buildTable",
 			args: args{
-				pods: []corev1.Pod{
+				javaPods: []JavaPod{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "podName",
-						},
-						Spec: corev1.PodSpec{
-							NodeName: "node-01",
-						},
-						Status: corev1.PodStatus{
-							Phase: corev1.PodRunning,
-							ContainerStatuses: []corev1.ContainerStatus{
-								{
-									Name: "nginx-web",
+						pod: corev1.Pod{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "podName",
+							},
+							Spec: corev1.PodSpec{
+								NodeName: "node-01",
+							},
+							Status: corev1.PodStatus{
+								Phase: corev1.PodRunning,
+								ContainerStatuses: []corev1.ContainerStatus{
+									{
+										Name: "nginx-web",
+									},
 								},
 							},
 						},
+						jdkVersion: "1.8.0",
 					},
 				},
 			},
@@ -102,7 +104,7 @@ func Test_buildTableToPrint(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := buildTableToPrint(tt.args.pods); !reflect.DeepEqual(got, tt.want) {
+			if got := buildTableToPrint(tt.args.javaPods); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("buildTableToPrint() = %v, want %v", got, tt.want)
 			}
 		})
