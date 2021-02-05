@@ -81,8 +81,8 @@ func NewKubeJavaCmd(streams genericclioptions.IOStreams) *cobra.Command {
 
 	cmdFactory, err := buildCmdFactory(flags)
 	if err != nil {
-		// TODO handle kube err
-		os.Exit(-1)
+		_, _ = fmt.Fprintf(streams.Out, "Please Specify Kubeconfig File, %s\n", err)
+		os.Exit(2)
 	}
 
 	rootCmd := &cobra.Command{
