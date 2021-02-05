@@ -82,7 +82,7 @@ var (
 )
 
 var (
-	headers = []interface{}{"NAME", "NODE", "STATUS", "CONTAINERS", "JDK"}
+	headers = []interface{}{"NAME", "NODE", "NAMESPACE", "STATUS", "CONTAINERS", "JDK"}
 	wg      = sync.WaitGroup{}
 )
 
@@ -90,8 +90,9 @@ type JavaPodFinder struct {
 	cmdFactory *util.CmdFactory
 	executor   util.RemoteExecutor
 
-	nameSpace string
-	colWidth  uint
+	namespace    string
+	allNamespace bool
+	colWidth     uint
 
 	genericclioptions.IOStreams
 }
@@ -124,18 +125,29 @@ func NewListCmd(factory *util.CmdFactory, streams genericclioptions.IOStreams) *
 	}
 
 	cmd.Flags().UintVarP(&f.colWidth, "colWidth", "w", 80, "colWidth used to set the table column width")
+	cmd.Flags().BoolVarP(&f.allNamespace, "allNamespace", "A", false, "list across all namespace to find java pod")
 
 	return cmd
 }
 
 // handle user flags
 func (f *JavaPodFinder) Complete(cmd *cobra.Command) error {
-	namespace, err := cmd.Flags().GetString("namespace")
+	// namespace from user kubeconfig
+	kubConfig := f.cmdFactory.UserKubConfig
+	currentContext, currentNameSpace, masterURL := util.GetCurrentConfigInfo(kubConfig)
+	cmdNamespace, err := cmd.Flags().GetString("namespace")
 	if err != nil {
 		return err
 	}
-	f.nameSpace = namespace
-	f.printKubeConfigInfo()
+	//default kubeconfig namespace
+	f.namespace = currentNameSpace
+	if f.allNamespace {
+		f.namespace = corev1.NamespaceAll
+	} else if len(cmdNamespace) > 0 && f.namespace != cmdNamespace {
+		// use user command input namespace
+		f.namespace = cmdNamespace
+	}
+	_, _ = fmt.Fprintf(f.Out, "context:%s\tmaserURL:%s\n", util.Yellow(currentContext), util.Yellow(masterURL))
 	return nil
 }
 
@@ -155,21 +167,10 @@ func (f *JavaPodFinder) Run() error {
 	return err
 }
 
-// print user kubeconfig
-func (f *JavaPodFinder) printKubeConfigInfo() {
-	kubConfig := f.cmdFactory.UserKubConfig
-	currentContext, currentNameSpace, masterURL := util.GetCurrentConfigInfo(kubConfig)
-	// namespace from user kubeconfig
-	if len(f.nameSpace) == 0 {
-		f.nameSpace = currentNameSpace
-	}
-	_, _ = fmt.Fprintf(f.Out, "context:%s\tnamespace:%s\tmaserURL:%s\n", util.Yellow(currentContext), util.Yellow(f.nameSpace), util.Yellow(masterURL))
-}
-
 // find pods that running java  application
 func (f *JavaPodFinder) findJavaPods() ([]JavaPod, error) {
 	coreV1Client := f.cmdFactory.ClientSet.CoreV1()
-	podInfo, err := coreV1Client.Pods(corev1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
+	podInfo, err := coreV1Client.Pods(f.namespace).List(context.TODO(), metav1.ListOptions{})
 
 	if err != nil {
 		return nil, err
@@ -184,6 +185,7 @@ func (f *JavaPodFinder) findJavaPods() ([]JavaPod, error) {
 		go f.filterJavaPod(restClient, pod, podChan)
 	}
 
+	// close channel to notify main goroutine
 	go func() {
 		wg.Wait()
 		close(podChan)
@@ -258,12 +260,14 @@ func buildTableToPrint(javaPods []JavaPod) *uitable.Table {
 		row[0] = pod.Name
 		// column: node
 		row[1] = podSpec.NodeName
+		// column: namespace
+		row[2] = pod.Namespace
 		// column: status
-		row[2] = util.ColorizePodStatus(podStatus.Phase)
+		row[3] = util.ColorizePodStatus(podStatus.Phase)
 		// column: containers
-		row[3] = containers
+		row[4] = containers
 		// column: jdkVersion
-		row[4] = javaPod.jdkVersion
+		row[5] = javaPod.jdkVersion
 		// fill table cells with row
 		rows[i].Cells = row
 		table.AddRow(row...)
