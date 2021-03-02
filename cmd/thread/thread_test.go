@@ -48,27 +48,3 @@
  */
 
 package thread
-
-import (
-	"github.com/cyka/kubectl-java/util"
-	"github.com/spf13/cobra"
-
-	"k8s.io/cli-runtime/pkg/genericclioptions"
-)
-
-type JvmThreadDumpOptions struct {
-	genericclioptions.IOStreams
-}
-
-func NewThreadDumpCmd(factory *util.CmdFactory, streams genericclioptions.IOStreams) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:     "",
-		Short:   "",
-		Long:    "",
-		Example: "",
-		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			return
-		},
-	}
-	return cmd
-}

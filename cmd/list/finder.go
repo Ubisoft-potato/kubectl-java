@@ -199,7 +199,7 @@ func (f *JavaPodFinder) findJavaPods() ([]JavaPod, error) {
 }
 
 // filter the pod that not running java application
-func (f *JavaPodFinder) filterJavaPod(client rest.Interface, pod corev1.Pod, podChan chan JavaPod) {
+func (f *JavaPodFinder) filterJavaPod(client rest.Interface, pod corev1.Pod, podChan chan<- JavaPod) {
 	defer wg.Done()
 	containers := pod.Spec.Containers
 	containersRunningJavaApp := make([]corev1.Container, 0, len(containers))

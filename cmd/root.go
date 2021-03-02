@@ -51,6 +51,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/cyka/kubectl-java/cmd/thread"
 	"os"
 	"path/filepath"
 
@@ -96,7 +97,8 @@ func NewKubeJavaCmd(streams genericclioptions.IOStreams) *cobra.Command {
 	flags.AddFlags(rootCmd.PersistentFlags())
 	// find java pod cmd
 	rootCmd.AddCommand(list.NewListCmd(cmdFactory, streams))
-
+	// jvm thread dump cmd
+	rootCmd.AddCommand(thread.NewThreadDumpCmd(cmdFactory, streams))
 	return rootCmd
 }
 
