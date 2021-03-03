@@ -38,7 +38,7 @@
 
 ## About The Project
 
-The kubectl java plugin aims to make you life easier while developing java application with k8s:
+The kubectl Java plugin will make your life easier while developing Java application with k8s:
 
 * find pods that running java application
 * jvm thread dump (👨🏻‍💻 working now)
