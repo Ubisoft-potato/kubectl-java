@@ -1,5 +1,7 @@
 <h1 align="center">The Kubectl Java Plugin</h1>
 
+![kubectl-java](https://socialify.git.ci/Ubisoft-potato/kubectl-java/image?description=1&font=KoHo&forks=1&issues=1&language=1&logo=https%3A%2F%2Fcamo.githubusercontent.com%2F537ff5237f38eda1091ba7221dde258733ac6de30a36fbda5be8d3c4364eba1a%2F68747470733a2f2f63646e2e766f782d63646e2e636f6d2f7468756d626f722f5f416f625a5a44745f525653746b745652376d555a70426b6f76633d2f3078303a363430783432372f31323030783830302f66696c746572733a666f63616c283078303a36343078343237292f63646e2e766f782d63646e2e636f6d2f6173736574732f313038373133372f6a6176615f6c6f676f5f3634302e6a7067&owner=1&pattern=Charlie%20Brown&pulls=1&stargazers=1&theme=Light)
+
 ![version][go-shield]
 ![commit][commit-shield]
 [![Go Report Card](https://goreportcard.com/badge/github.com/Ubisoft-potato/kubectl-java)](https://goreportcard.com/report/github.com/Ubisoft-potato/kubectl-java)
