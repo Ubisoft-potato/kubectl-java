@@ -102,7 +102,7 @@ type JavaPod struct {
 	jdkVersion string
 }
 
-//New kubectl-java list sub cmd
+// NewListCmd New kubectl-java list sub cmd
 func NewListCmd(factory *util.CmdFactory, streams genericclioptions.IOStreams) *cobra.Command {
 	f := &JavaPodFinder{
 		cmdFactory: factory,
@@ -130,7 +130,7 @@ func NewListCmd(factory *util.CmdFactory, streams genericclioptions.IOStreams) *
 	return cmd
 }
 
-// handle user flags
+// Complete handle user flags
 func (f *JavaPodFinder) Complete(cmd *cobra.Command) error {
 	// namespace from user kubeconfig
 	kubConfig := f.cmdFactory.UserKubConfig
@@ -151,12 +151,12 @@ func (f *JavaPodFinder) Complete(cmd *cobra.Command) error {
 	return nil
 }
 
-// validate the provided flags
+// Validate validate the provided flags
 func (f *JavaPodFinder) Validate() error {
 	return nil
 }
 
-// execute the cmd
+// Run execute the cmd
 func (f *JavaPodFinder) Run() error {
 	pods, err := f.findJavaPods()
 	if err != nil {
