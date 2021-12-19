@@ -50,10 +50,10 @@
 package thread
 
 import (
-	"github.com/cyka/kubectl-java/util"
 	"github.com/spf13/cobra"
-
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+
+	"github.com/cyka/kubectl-java/util"
 )
 
 type JvmThreadDumpOptions struct {
