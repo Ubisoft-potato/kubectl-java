@@ -56,15 +56,15 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/cyka/kubectl-java/util"
 	"github.com/gosuri/uitable"
 	"github.com/spf13/cobra"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+
+	"github.com/cyka/kubectl-java/util"
 )
 
 var (
